@@ -1,0 +1,48 @@
+services:
+  php:
+    container_name: php
+    build:
+      dockerfile: php-dockerfile
+      context: .
+    ports:
+      - 9000:9000
+    volumes:
+      - './www:/var/www/html/web'
+    depends_on:
+      - mariadb
+
+  nginx:
+    container_name: web
+    image: nginx:latest
+    ports:
+      - 80:80
+    links:
+      - 'php'
+    volumes:
+      - './www:/var/www/html/web'
+      - './conf:/etc/nginx/conf.d'
+    depends_on:
+      - php
+
+  ollama:
+    volumes:
+      - './models:/mnt/models'
+    container_name: ollama
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS="*"
+      - OLLAMA_MODELS="/mnt/models"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
